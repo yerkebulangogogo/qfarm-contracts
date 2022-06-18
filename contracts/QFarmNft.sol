@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import "./interface/IQFarmWhitelist.sol";
 
 contract QFarmNft is 
     ERC721,
@@ -32,12 +33,12 @@ contract QFarmNft is
         address _addrFeeWallet,
         uint256 _price
     ) ERC721(_symbol, _name) {
-        require(_price > 0, "QFarmNft: ZERO_ADDRESS");
+        require(_price > 0, "QFarmNft: ZERO_AMOUNT");
         require(
             _addrPayToken != address(0) && _addrWhitelist != address(0),
             "QFarmNft: ZERO_ADDRESS"
         );
-        require(addrPayToken != address(0), "QFarmNft: ZERO_ADDRESS");
+        require(_addrPayToken != address(0), "QFarmNft: ZERO_ADDRESS");
         addrPayToken = _addrPayToken;
         addrWhitelist = _addrWhitelist;
         addrFeeWallet = _addrFeeWallet;
@@ -51,6 +52,12 @@ contract QFarmNft is
     function buyToken(uint256 _amount) external {
         require(_amount == price, "QFarmNft: WRONG_AMOUNT");
         address sender = _msgSender();
+        (bool isWhitelist, uint256 timeToEnd) = 
+            IQFarmWhitelist(addrWhitelist).getUser(sender);
+        require(
+            isWhitelist && timeToEnd > block.timestamp,
+            "QFarmNft: ERROR_WHITELIST"
+        );
         IERC20(addrPayToken).safeTransferFrom(
             sender,
             addrFeeWallet,

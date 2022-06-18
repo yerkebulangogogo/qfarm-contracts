@@ -29,7 +29,7 @@ contract QFarmToken is ERC20 {
             _addrNft != address(0), 
             "QFarmToken: ZERO_ADDRESS"
         );
-        addrNft != _addrNft;
+        addrNft = _addrNft;
     }
     mapping(uint256 => Reward) public rewards;
 

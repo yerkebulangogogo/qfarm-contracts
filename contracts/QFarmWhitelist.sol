@@ -10,16 +10,16 @@ contract QFarmWhitelist is IQFarmWhitelist, AccessControlEnumerable{
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    bytes32 public override constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-    uint256 public override price; 
-    uint256 public override addrPayToken;
-    uint256 public override addrFeeWallet;
+    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    uint256 public price; 
+    address public addrPayToken;
+    address public addrFeeWallet;
 
     mapping(address => User) public users;
     mapping(address => User) public farmers;
 
     constructor(
-        address _addrFeeWallet
+        address _addrFeeWallet,
         address _addrPayToken, 
         uint256 _price
     ){
@@ -38,7 +38,7 @@ contract QFarmWhitelist is IQFarmWhitelist, AccessControlEnumerable{
     function getUser(address _wallet) 
         external 
         view 
-        override
+    
         returns(bool, uint256)
     {
         User memory user = users[_wallet];
@@ -47,18 +47,18 @@ contract QFarmWhitelist is IQFarmWhitelist, AccessControlEnumerable{
 
     function setPrice(uint256 _price) 
         external 
-        override
+    
         onlyRole(OPERATOR_ROLE)
     {
         require(_price > 0, "QFarmWhitelist: ZERO_AMOUNT");
-        price = _price
+        price = _price;
     }
 
     function addToWhitelist(
         address _to,
         address _farmer, 
         uint256 _amount
-    ) external override {
+    ) external {
         require(_amount == price, "QFarmWhitelist: WRONG_AMOUNT");
         require(_farmer != address(0), "QFarmWhitelist: ZERO_ADDRESS");
         IERC20(addrPayToken).safeTransferFrom(
@@ -77,12 +77,13 @@ contract QFarmWhitelist is IQFarmWhitelist, AccessControlEnumerable{
 
     function removeFromWhitelist(address _to, uint256 _amount) 
         external 
-        override 
+     
         onlyRole(OPERATOR_ROLE)
     {
         users[_to] = User({
             timeEnd: 0,
-            isWhitelist: false
+            isWhitelist: false,
+            farmer: users[_to].farmer
         });
         emit DeWhitelist(_to);
     }

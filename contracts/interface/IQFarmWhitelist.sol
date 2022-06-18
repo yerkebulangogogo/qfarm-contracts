@@ -16,9 +16,9 @@ interface IQFarmWhitelist {
 
     function price() external returns(uint256);
 
-    function payToken() external returns(address);
+    function addrPayToken() external returns(address);
 
-    function feeWallet() external returns(address);
+    function addrFeeWallet() external returns(address);
 
     function getUser(address _wallet) 
         external 
