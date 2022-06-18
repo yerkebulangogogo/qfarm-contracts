@@ -12,7 +12,6 @@ contract QFarmToken is ERC20 {
     struct Reward{
         uint256 timeLast;
         uint256 rewardNonce;
-        uint256 rewardMissed;
     }
 
     address public addrNft;                        // NFT address
@@ -37,7 +36,7 @@ contract QFarmToken is ERC20 {
     function reward(uint256 _tokenId) public {
         Reward memory reward = rewards[_tokenId];
         uint256 rewardToUser = rewardAmount;
-        address tokenOwner = IERC721(addrNft).owner(_tokenId);
+        address tokenOwner = IERC721(addrNft).ownerOf(_tokenId);
         require(
             msg.sender == tokenOwner,
             "QFarmToken: ONLY_OWNER"
@@ -45,32 +44,35 @@ contract QFarmToken is ERC20 {
         if(reward.timeLast == 0){
             _setDataAboutMint(
                 _tokenId, 
-                block.timestamp, 
-                reward.rewardNonce.add(1),
-                reward.rewardMissed.add(rewardToUser)
+                block.timestamp,
+                reward.rewardNonce.add(1)
             );
         }else{
             rewardToUser = rewardAmount
                 .mul(
                     block.timestamp.sub(reward.timeLast)
                 )
-                .div(WEEK);
+                .mul(1e18)
+                .div(WEEK)
+                .div(1e18);
+            _setDataAboutMint(
+                _tokenId, 
+                block.timestamp,
+                reward.rewardNonce.add(1)
+            );
         }
-        
-        
+        _mint(msg.sender, rewardToUser);
     }
-        _mint(account, amount);
+
 
     function _setDataAboutMint(
         uint256 _id,
         uint256 _lastTime,
-        uint256 _rewardNonce,
-        uint256 _rewardMissed
+        uint256 _rewardNonce
     ) internal {
         rewards[_id] = Reward({
             timeLast: _lastTime,
-            rewardNonce: _rewardNonce,
-            rewardMissed: _rewardMissed
+            rewardNonce: _rewardNonce
         });
     }
 }
