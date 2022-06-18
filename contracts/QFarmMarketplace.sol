@@ -8,9 +8,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 import "./interface/IQFarmWhitelist.sol";
 
-contract QFarmMarketPlace {
+contract QFarmMarketPlace is Context, AccessControlEnumerable{
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
@@ -24,11 +25,11 @@ contract QFarmMarketPlace {
     event CloseSale(address nft, uint256 id);
     event Sold(address to, uint256 saleId);
 
-    bytes32 public override constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-    uint256 public override addrPayToken;
-    uint256 public override addrFeeWallet;
-    uint256 public override counterIds;
-    uint256 public override feePrecent;
+    bytes32 public  constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    address public addrPayToken;
+    address public addrFeeWallet;
+    uint256 public counterIds;
+    uint256 public feePrecent;
 
     struct Sale{
         address owner;
@@ -42,7 +43,7 @@ contract QFarmMarketPlace {
     mapping(address => EnumerableSet.UintSet) internal saleIds;
 
     constructor(
-        address _addrFeeWallet
+        address _addrFeeWallet,
         address _addrPayToken,
         uint256 _feePrecent 
     ){
@@ -74,20 +75,28 @@ contract QFarmMarketPlace {
         return this.onERC721Received.selector;
     }
 
-    function getSaleIdsByAddress(address _walllet) 
+    function getSaleIdsByAddress(address _wallet) 
         external 
         view 
-        override 
         returns(uint256[] memory)
     {
-        return saleIds[_wallet];
+        uint256 len = saleIds[_wallet].length();
+        uint256[] memory ids = new uint256[](len);
+        for(
+            uint256 i=0; 
+            i<len; 
+            i++
+        ){
+            ids[i] = saleIds[_wallet].at(i);
+        }
+        return ids;
     }    
 
     function saleToken(
-        address _addrNft
+        address _addrNft,
         uint256 _tokenId, 
         uint256 _price
-    ) external override{
+    ) external{
         address sender = _msgSender();
         require(
             _addrNft != address(0),
@@ -100,15 +109,17 @@ contract QFarmMarketPlace {
         );
         sales[counterIds] = Sale({
             owner: sender,
+            nft: _addrNft,
+            id: _tokenId,
             price: _price,
-            time: bloc.timestamp
-        })
+            time: block.timestamp
+        });
         saleIds[sender].add(counterIds);
         counterIds = counterIds.add(1);
         emit OpenSale(sender, _addrNft, _tokenId, _price);
     }
 
-    function removeToken(uint256 _saleId, address _to) external override{
+    function removeToken(uint256 _saleId) external{
         Sale memory sale = sales[_saleId];
         require(
             sale.owner == _msgSender(), 
@@ -116,16 +127,16 @@ contract QFarmMarketPlace {
         );
         sales[_saleId].owner = address(0);
         sales[_saleId].nft = address(0);
-        saleIds[address].remove(_saleId);
+        saleIds[_msgSender()].remove(_saleId);
         IERC721(sale.nft).safeTransferFrom(
-            address(this)
+            address(this),
             sale.owner,
             sale.id
         );
         emit CloseSale(sale.nft, sale.id);
     }
     
-    function buyToken(uint256 _saleId) external override{
+    function buyToken(uint256 _saleId) external{
         Sale memory sale = sales[_saleId];
         require(
             sale.nft != address(0), 
@@ -135,13 +146,14 @@ contract QFarmMarketPlace {
             .mul(feePrecent)
             .div(1000);
         sales[_saleId].owner = address(0);
-        _safeTrasferFrom20(_msgSender(), addrFeeWallet, fee);
+        _safeTrasferFrom20(addrPayToken, _msgSender(), addrFeeWallet, fee);
         _safeTrasferFrom20(
+            addrPayToken,
             _msgSender(), 
             sale.owner, 
             sale.price.sub(fee)
         );
-        IERC721(sale.nft).safeTranferFrom(
+        IERC721(sale.nft).safeTransferFrom(
             address(this),
             _msgSender(),
             sale.id

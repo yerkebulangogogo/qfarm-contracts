@@ -75,11 +75,6 @@ contract QFarmWhitelist is IQFarmWhitelist, AccessControlEnumerable{
         emit Whitelist(_to, _farmer, time);
     }
 
-    function addToFarmerRole(type name) {
-        
-    }
-
-
     function removeFromWhitelist(address _to, uint256 _amount) 
         external 
         override 

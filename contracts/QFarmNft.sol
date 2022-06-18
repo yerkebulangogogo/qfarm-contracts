@@ -5,13 +5,13 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
 contract QFarmNft is 
     ERC721,
     ERC721URIStorage,
     ERC721Enumerable,
-    IERC20,
     AccessControlEnumerable
 {
     using SafeERC20 for IERC20;
@@ -22,21 +22,25 @@ contract QFarmNft is
     uint256 public price;
     address public addrPayToken;
     address public addrWhitelist;
+    address public addrFeeWallet;
 
     constructor(
         string memory _name, 
         string memory _symbol,
         address _addrPayToken,
         address _addrWhitelist,
+        address _addrFeeWallet,
         uint256 _price
     ) ERC721(_symbol, _name) {
         require(_price > 0, "QFarmNft: ZERO_ADDRESS");
         require(
-            _addrPayToken != address(0) && _addrWhitelist != address(0)
+            _addrPayToken != address(0) && _addrWhitelist != address(0),
             "QFarmNft: ZERO_ADDRESS"
         );
+        require(addrPayToken != address(0), "QFarmNft: ZERO_ADDRESS");
         addrPayToken = _addrPayToken;
         addrWhitelist = _addrWhitelist;
+        addrFeeWallet = _addrFeeWallet;
         price = _price;
 
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
@@ -44,7 +48,7 @@ contract QFarmNft is
     }
 
 
-    function buyToken(address _amount) external {
+    function buyToken(uint256 _amount) external {
         require(_amount == price, "QFarmNft: WRONG_AMOUNT");
         address sender = _msgSender();
         IERC20(addrPayToken).safeTransferFrom(
@@ -67,7 +71,7 @@ contract QFarmNft is
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(ERC721, ERC721Enumerable)
+        override(ERC721, ERC721Enumerable, AccessControlEnumerable)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
